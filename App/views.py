@@ -5,6 +5,58 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django.core.cache import cache
 from rest_framework.views import APIView
+from rest_framework import generics, permissions
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
+
+from .serializer import RegisterSerializer, UserSerializer
+
+
+class RegisterView(generics.CreateAPIView):
+    serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class ProfileView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        refresh = request.data.get('refresh')
+
+        if not refresh:
+            return Response(
+                {'detail': 'Refresh token required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            token = RefreshToken(refresh)
+            token.blacklist()
+
+            return Response(
+                {'detail': 'Logout successful'},
+                status=status.HTTP_200_OK
+            )
+
+        except TokenError:
+            return Response(
+                {'detail': 'Invalid token'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
 
 class Products(ModelViewSet):
     queryset=Product.objects.all()
